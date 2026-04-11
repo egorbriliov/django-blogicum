@@ -2,14 +2,18 @@ from django.db import models
 from django.utils import timezone
 
 
-class PostQuerySet(models.QuerySet):
+class PublishedQuerySet(models.QuerySet):
     def published(self):
-        return self.filter(is_published=True, category__is_published=True)
+        return self.filter(is_published=True)
 
+
+class PublishedCategoryQuerySet(PublishedQuerySet):
+    ...
+
+
+class PublishedPostQuerySet(PublishedQuerySet):
     def before_current_time(self):
         return self.filter(pub_date__lt=timezone.now())
 
-
-class CategoryQuerySet(models.QuerySet):
-    def published(self):
-        return self.filter(is_published=True)
+    def category_published(self):
+        return self.filter(category__is_published=True)

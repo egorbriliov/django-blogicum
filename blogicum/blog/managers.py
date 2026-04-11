@@ -1,17 +1,21 @@
 from django.db import models
 
-from .querysets import PostQuerySet, CategoryQuerySet
-
-
-class PublishedPostManager(models.Manager):
-    def get_queryset(self) -> PostQuerySet:
-        return (
-            PostQuerySet(self.model)
-            .published()
-            .before_current_time()
-        )
+from .querysets import PublishedCategoryQuerySet, PublishedPostQuerySet
 
 
 class PublishedCategoryManager(models.Manager):
-    def get_queryset(self) -> CategoryQuerySet:
-        return CategoryQuerySet(self.model).published()
+    def get_queryset(self) -> PublishedCategoryQuerySet:
+        return (
+            PublishedCategoryQuerySet(self.model)
+            .published()
+        )
+
+
+class PublishedPostManager(models.Manager):
+    def get_queryset(self) -> PublishedPostQuerySet:
+        return (
+            PublishedPostQuerySet(self.model)
+            .before_current_time()
+            .published()
+            .category_published()
+        )
