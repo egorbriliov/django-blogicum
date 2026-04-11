@@ -72,6 +72,7 @@ class PostMixin:
 
 class PostFormMixin:
     """Миксин для формы поста"""
+
     form_class = PostForm
 
     def form_valid(self, form):
@@ -81,6 +82,7 @@ class PostFormMixin:
 
 class PostDetailView(PostMixin, DetailView):
     """Представление для показа поста"""
+
     template_name = 'blog/detail.html'
 
     def get_object(self, queryset=None):
@@ -181,6 +183,7 @@ class ProfileView(ListView):
 
 class ProfileEditView(LoginRequiredMixin, UpdateView):
     """Представления для изменения профиля пользователя"""
+
     template_name = 'blog/user.html'
     form_class = UserEditForm
 
