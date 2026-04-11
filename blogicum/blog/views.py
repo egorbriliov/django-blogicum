@@ -1,11 +1,12 @@
 from django.shortcuts import redirect, get_object_or_404
 from django.contrib.auth import get_user_model
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.views.generic.detail import SingleObjectMixin
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.views.generic import (
     DetailView, CreateView, UpdateView, DeleteView, ListView
 )
+from django.db.models import Count
 
 from .models import Post, Category, Comment
 from .forms import PostForm, UserEditForm, CommentForm
@@ -14,12 +15,9 @@ from .constants import PAGINATE_MAX_LENGHT
 
 User = get_user_model()
 
-"""
-Global mixins
-"""
-
 
 class OnlyAuthorMixin(UserPassesTestMixin, SingleObjectMixin):
+    """Миксин для проверки авторства"""
 
     def test_func(self):
         return self.get_object().author == self.request.user
@@ -28,27 +26,21 @@ class OnlyAuthorMixin(UserPassesTestMixin, SingleObjectMixin):
         return redirect('blog:index')
 
 
-"""
-Main
-"""
-
-
 class IndexView(ListView):
+    """Представления для главной страницы"""
+
     model = Post
     paginate_by = PAGINATE_MAX_LENGHT
     template_name = 'blog/index.html'
     context_object_name = 'page_obj'
 
     def get_queryset(self):
-        return Post.published.filter(category__in=Category.published.all())
-
-
-"""
-Category
-"""
+        return Post.published.annotate(comment_count=Count('comments'))
 
 
 class CategoryView(LoginRequiredMixin, ListView):
+    """Представления для отображения категории постов"""
+
     paginate_by = PAGINATE_MAX_LENGHT
     template_name = 'blog/category.html'
 
@@ -64,24 +56,22 @@ class CategoryView(LoginRequiredMixin, ListView):
         return context
 
 
-"""
-Posts
-"""
-
-
 class PostMixin:
+    """Базовый миксин для всех моделей постов"""
+
     model = Post
     pk_url_kwarg = 'post_id'
     template_name = 'blog/create.html'
 
     def get_success_url(self):
-        return reverse_lazy(
+        return reverse(
             'blog:profile',
             kwargs={'username': self.request.user.username}
         )
 
 
 class PostFormMixin:
+    """Миксин для формы поста"""
     form_class = PostForm
 
     def form_valid(self, form):
@@ -90,14 +80,14 @@ class PostFormMixin:
 
 
 class PostDetailView(PostMixin, DetailView):
+    """Представление для показа поста"""
     template_name = 'blog/detail.html'
 
-    def get_object(self):
-        post_id = self.kwargs['post_id']
-        post = get_object_or_404(Post, id=post_id)
-        if post.author != self.request.user:
-            return get_object_or_404(Post.published.all(), id=post_id)
-        return post
+    def get_object(self, queryset=None):
+        post: Post = super().get_object(queryset)
+        if post.author == self.request.user:
+            return post
+        return super().get_object(Post.published.all())
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -107,24 +97,23 @@ class PostDetailView(PostMixin, DetailView):
 
 
 class PostCreateView(PostMixin, PostFormMixin, LoginRequiredMixin, CreateView):
-    ...
+    """Представление для создания поста"""
 
 
 class PostDeleteView(PostMixin, OnlyAuthorMixin, DeleteView):
-    ...
+    """Представление для удаления поста"""
 
 
 class PostEditView(PostMixin, PostFormMixin, OnlyAuthorMixin, UpdateView):
+    """Представление для изменения поста"""
+
     def handle_no_permission(self):
         return redirect('blog:post_detail', post_id=self.kwargs['post_id'])
 
 
-"""
-Post | Comments
-"""
-
-
 class CommentMixin:
+    """Базовый миксин для комментария поста"""
+
     model = Comment
     template_name = 'blog/comment.html'
     pk_url_kwarg = 'comment_id'
@@ -136,6 +125,8 @@ class CommentMixin:
 
 
 class CommentFormMixin:
+    """Миксин формаы комментария для поста"""
+
     form_class = CommentForm
 
     def form_valid(self, form):
@@ -150,27 +141,24 @@ class CommentFormMixin:
 class CommentCreateView(
     CommentMixin, CommentFormMixin, LoginRequiredMixin, CreateView
 ):
-    ...
+    """Представления для создания комментария к посту"""
 
 
 class CommentDeleteView(
     CommentMixin, OnlyAuthorMixin, DeleteView
 ):
-    ...
+    """Представления для удаления комментария к посту"""
 
 
 class CommentEditView(
     CommentMixin, CommentFormMixin, OnlyAuthorMixin, UpdateView
 ):
-    ...
-
-
-"""
-User
-"""
+    """Представления для изменения комментария к посту"""
 
 
 class ProfileView(ListView):
+    """Представления для отображения профиля пользователя"""
+
     template_name = 'blog/profile.html'
     paginate_by = PAGINATE_MAX_LENGHT
 
@@ -178,7 +166,7 @@ class ProfileView(ListView):
         self.profile = get_object_or_404(User,
                                          username=self.kwargs['username'])
         posts = self.profile.posts.order_by('-pub_date')
-        return posts
+        return posts.annotate(comment_count=Count('comments'))
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -192,6 +180,7 @@ class ProfileView(ListView):
 
 
 class ProfileEditView(LoginRequiredMixin, UpdateView):
+    """Представления для изменения профиля пользователя"""
     template_name = 'blog/user.html'
     form_class = UserEditForm
 

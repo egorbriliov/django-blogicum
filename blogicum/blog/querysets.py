@@ -17,3 +17,6 @@ class PublishedPostQuerySet(PublishedQuerySet):
 
     def category_published(self):
         return self.filter(category__is_published=True)
+
+    def ordering_by_pub_date(self):
+        return self.order_by('-pub_date')

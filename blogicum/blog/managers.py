@@ -18,4 +18,5 @@ class PublishedPostManager(models.Manager):
             .before_current_time()
             .published()
             .category_published()
+            .ordering_by_pub_date()
         )

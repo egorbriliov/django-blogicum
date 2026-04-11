@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
-from django.urls import reverse_lazy
+from django.urls import reverse
 
 from .constants import CHAR_FIELD_MAX_LENGHT
 from .managers import PublishedPostManager, PublishedCategoryManager
@@ -9,7 +9,25 @@ from .managers import PublishedPostManager, PublishedCategoryManager
 User = get_user_model()
 
 
-class Category(models.Model):
+class Published(models.Model):
+    is_published = models.BooleanField(
+        'Опубликовано',
+        default=True,
+        help_text='Снимите галочку, чтобы скрыть.'
+    )
+
+    class Meta:
+        abstract = True
+
+
+class CreatedAt(models.Model):
+    created_at = models.DateTimeField('Добавлено', auto_now_add=True)
+
+    class Meta:
+        abstract = True
+
+
+class Category(Published):
     """Модель представляющая тематическую категорию"""
 
     title = models.CharField(
@@ -21,11 +39,6 @@ class Category(models.Model):
                             help_text=('Идентификатор страницы для URL; '
                                        'разрешены символы латиницы, цифры, '
                                        'дефис и подчёркивание.'))
-    is_published = models.BooleanField(
-        'Опубликовано',
-        default=True,
-        help_text='Снимите галочку, чтобы скрыть публикацию.'
-    )
 
     objects = models.Manager()
     published = PublishedCategoryManager()
@@ -54,9 +67,8 @@ class Location(models.Model):
         return self.name
 
 
-class Comment(models.Model):
+class Comment(CreatedAt):
     text = models.TextField('Текст')
-    created_at = models.DateTimeField('Добавлено', auto_now_add=True)
     post = models.ForeignKey(
         'Post',
         null=False,
@@ -68,7 +80,7 @@ class Comment(models.Model):
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='author',
+        related_name='comments',
         verbose_name='Автор комментария',
     )
 
@@ -80,27 +92,17 @@ class Comment(models.Model):
         return self.text
 
 
-class Post(models.Model):
+class Post(Published, CreatedAt):
     """Модель представляющая публикации"""
 
     title = models.CharField(
         'Заголовок',
         max_length=CHAR_FIELD_MAX_LENGHT)
     text = models.TextField('Текст')
-    is_published = models.BooleanField(
-        'Опубликовано',
-        default=True,
-        help_text='Снимите галочку, чтобы скрыть публикацию.'
-    )
     pub_date = models.DateTimeField('Дата и время публикации',
                                     help_text=('Если установить дату и время '
                                                'в будущем — можно делать '
                                                'отложенные публикации.'))
-
-    created_at = models.DateTimeField(
-        'Добавлено',
-        auto_now_add=True
-    )
 
     author = models.ForeignKey(
         User,
@@ -134,16 +136,11 @@ class Post(models.Model):
     objects = models.Manager()
     published = PublishedPostManager()
 
-    @property
-    def comment_count(self):
-        return Comment.objects.filter(post=self).count()
-
     def __str__(self):
         return self.title
 
     def get_absolute_url(self):
-        return reverse_lazy('blog:post_detail',
-                            kwargs={'pk': self.pk})
+        return reverse('blog:post_detail', kwargs={'pk': self.pk})
 
     class Meta:  # type: ignore
         verbose_name = 'публикация'
