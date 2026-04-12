@@ -1,6 +1,16 @@
 from django.db import models
 
-from .querysets import PublishedCategoryQuerySet, PublishedPostQuerySet
+from .querysets import (PublishedCategoryQuerySet, PublishedPostQuerySet,
+                        WithCommentCountQuerySet)
+
+
+class WithCommentCountManager(models.Manager):
+
+    def get_queryset(self) -> WithCommentCountQuerySet:
+        return WithCommentCountQuerySet(self.model)
+
+    def with_comment_count(self):
+        return self.get_queryset().with_comment_count()
 
 
 class PublishedCategoryManager(models.Manager):
@@ -11,7 +21,7 @@ class PublishedCategoryManager(models.Manager):
         )
 
 
-class PublishedPostManager(models.Manager):
+class PublishedPostManager(WithCommentCountManager):
     def get_queryset(self) -> PublishedPostQuerySet:
         return (
             PublishedPostQuerySet(self.model)

@@ -1,5 +1,11 @@
 from django.db import models
 from django.utils import timezone
+from django.db.models import Count
+
+
+class WithCommentCountQuerySet(models.QuerySet):
+    def with_comment_count(self):
+        return self.annotate(comment_count=Count('comments'))
 
 
 class PublishedQuerySet(models.QuerySet):
@@ -11,7 +17,7 @@ class PublishedCategoryQuerySet(PublishedQuerySet):
     ...
 
 
-class PublishedPostQuerySet(PublishedQuerySet):
+class PublishedPostQuerySet(PublishedQuerySet, WithCommentCountQuerySet):
     def before_current_time(self):
         return self.filter(pub_date__lt=timezone.now())
 

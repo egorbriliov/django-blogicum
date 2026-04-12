@@ -6,7 +6,6 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.views.generic import (
     DetailView, CreateView, UpdateView, DeleteView, ListView
 )
-from django.db.models import Count
 
 from .models import Post, Category, Comment
 from .forms import PostForm, UserEditForm, CommentForm
@@ -35,7 +34,7 @@ class IndexView(ListView):
     context_object_name = 'page_obj'
 
     def get_queryset(self):
-        return Post.published.annotate(comment_count=Count('comments'))
+        return Post.published.all().with_comment_count()
 
 
 class CategoryView(LoginRequiredMixin, ListView):
@@ -121,7 +120,7 @@ class CommentMixin:
     pk_url_kwarg = 'comment_id'
 
     def get_success_url(self):
-        return reverse_lazy(
+        return reverse(
             'blog:post_detail',
             kwargs={'post_id': self.kwargs['post_id']})
 
@@ -167,8 +166,8 @@ class ProfileView(ListView):
     def get_queryset(self):
         self.profile = get_object_or_404(User,
                                          username=self.kwargs['username'])
-        posts = self.profile.posts.order_by('-pub_date')
-        return posts.annotate(comment_count=Count('comments'))
+        posts: Post = self.profile.posts.order_by('-pub_date')
+        return posts.with_comment_count()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -191,7 +190,7 @@ class ProfileEditView(LoginRequiredMixin, UpdateView):
         return self.request.user
 
     def get_success_url(self):
-        return reverse_lazy(
+        return reverse(
             'blog:profile',
             kwargs={'username': self.request.user.username}
         )

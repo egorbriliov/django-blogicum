@@ -3,7 +3,8 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 
 from .constants import CHAR_FIELD_MAX_LENGHT
-from .managers import PublishedPostManager, PublishedCategoryManager
+from .managers import (PublishedPostManager, PublishedCategoryManager,
+                       WithCommentCountManager)
 
 
 User = get_user_model()
@@ -133,7 +134,7 @@ class Post(Published, CreatedAt):
                               upload_to='post_images',
                               blank=True)
 
-    objects = models.Manager()
+    objects = WithCommentCountManager()
     published = PublishedPostManager()
 
     def __str__(self):
