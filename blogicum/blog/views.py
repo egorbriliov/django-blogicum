@@ -1,6 +1,6 @@
 from django.shortcuts import redirect, get_object_or_404
 from django.contrib.auth import get_user_model
-from django.urls import reverse_lazy, reverse
+from django.urls import reverse
 from django.views.generic.detail import SingleObjectMixin
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.views.generic import (
@@ -34,7 +34,7 @@ class IndexView(ListView):
     context_object_name = 'page_obj'
 
     def get_queryset(self):
-        return Post.published.all().with_comment_count()
+        return Post.published.with_comment_count()
 
 
 class CategoryView(LoginRequiredMixin, ListView):
@@ -175,7 +175,7 @@ class ProfileView(ListView):
         return context
 
     def get_success_url(self):
-        return reverse_lazy(
+        return reverse(
             'blog:index',
         )
 
